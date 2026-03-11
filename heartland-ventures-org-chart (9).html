@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heartland Ventures — Accountability Chart™</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e2a;
+    --border: #3a4455;
+    --border-edit: #3a4a6a;
+    --gold: #c9a84c;
+    --gold-light: #e8c96a;
+    --gold-dim: rgba(201,168,76,0.15);
+    --text: #e8e4d8;
+    --text-muted: #8a8d9a;
+    --text-dim: #4a4d5a;
+    --danger: #c94c4c;
+    --danger-dim: rgba(201,76,76,0.15);
+    --success: #4ca84c;
+    --line: #4a5568;
+    --line-h: 24px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-weight:300; min-height:100vh; overflow:hidden; }
+
+  /* Grid */
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(201,168,76,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.07) 1px,transparent 1px); background-size:48px 48px; pointer-events:none; z-index:0; }
+  body::after { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(201,168,76,0.13) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.13) 1px,transparent 1px); background-size:192px 192px; pointer-events:none; z-index:0; }
+
+  /* ── HEADER ── */
+  header { position:fixed; top:0; left:0; right:0; z-index:100; height:50px; padding:0 20px; display:flex; align-items:center; gap:12px; background:rgba(13,15,20,0.97); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); }
+  header h1 { font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:600; letter-spacing:0.02em; white-space:nowrap; }
+  .tag { font-size:9px; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); padding:2px 8px; border-radius:2px; }
+  .header-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .saved-lbl { font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--success); opacity:0; transition:opacity .4s; }
+  .saved-lbl.show { opacity:1; }
+
+  /* Zoom */
+  .zoom-strip { display:flex; align-items:center; gap:5px; border:1px solid var(--border); border-radius:3px; padding:3px 9px; }
+  .zoom-lbl { font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); }
+  .zoom-val { font-size:11px; color:var(--gold); min-width:32px; text-align:center; font-weight:500; }
+  .zbtn { width:19px; height:19px; background:transparent; border:1px solid var(--border); border-radius:2px; color:var(--text-muted); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all .15s; line-height:1; }
+  .zbtn:hover { border-color:var(--gold); color:var(--gold); }
+  .zfit { font-size:9px; letter-spacing:.08em; text-transform:uppercase; background:transparent; border:1px solid var(--border); border-radius:2px; color:var(--text-muted); cursor:pointer; padding:0 6px; height:19px; font-family:'DM Sans',sans-serif; transition:all .15s; }
+  .zfit:hover { border-color:var(--gold); color:var(--gold); }
+
+  .btn { font-family:'DM Sans',sans-serif; font-size:10px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; padding:6px 12px; border-radius:3px; cursor:pointer; border:1px solid; transition:all .2s; white-space:nowrap; }
+  .btn-edit { background:transparent; border-color:var(--border); color:var(--text-muted); }
+  .btn-edit:hover,.btn-edit.active { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
+  .btn-dl { background:transparent; border-color:var(--success); color:var(--success); }
+  .btn-dl:hover { background:rgba(76,168,76,.1); }
+  .btn-rst { background:transparent; border-color:var(--danger); color:var(--danger); padding:6px 9px; }
+  .btn-rst:hover { background:var(--danger-dim); }
+  .btn-save { background:var(--gold); border-color:var(--gold); color:#0d0f14; font-weight:600; }
+  .btn-save:hover { background:var(--gold-light); }
+  .btn-cancel { background:transparent; border-color:var(--border); color:var(--text-muted); }
+  .btn-cancel:hover { border-color:var(--text-muted); color:var(--text); }
+
+  .edit-banner { display:none; position:fixed; top:50px; left:0; right:0; z-index:99; background:var(--gold-dim); border-bottom:1px solid rgba(201,168,76,.3); padding:5px 20px; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); text-align:center; }
+  .edit-banner.on { display:block; }
+
+  /* ── CANVAS ── */
+  .canvas-outer { position:fixed; top:50px; left:0; right:0; bottom:0; overflow:auto; z-index:1; cursor:grab; }
+  .canvas-outer:active { cursor:grabbing; }
+  body.edit-mode .canvas-outer { cursor:default; }
+  .canvas-inner { display:inline-block; padding:48px 80px 80px; transform-origin:top left; min-width:max-content; }
+
+  /* ── CSS TREE ── */
+  .tree,.tree ul,.tree li { list-style:none; margin:0; padding:0; }
+  .tree { display:flex; justify-content:center; }
+  .tree li { display:flex; flex-direction:column; align-items:center; position:relative; padding:0 8px; }
+  .tree li::before { content:''; display:block; width:2px; height:var(--line-h); background:var(--line); flex-shrink:0; }
+  .tree ul { display:flex; justify-content:center; position:relative; }
+  .tree ul::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--line); z-index:0; }
+  .tree > li::before { display:none; }
+  .node-card-wrap { display:flex; flex-direction:column; align-items:center; }
+  .down-to-children { width:2px; height:var(--line-h); background:var(--line); flex-shrink:0; }
+
+  /* ── CARD ── */
+  .card { width:175px; background:var(--surface); border:1px solid var(--border); border-radius:5px; overflow:hidden; transition:border-color .25s,box-shadow .25s,transform .2s; position:relative; flex-shrink:0; z-index:2; }
+  .card.ceo-card::before { content:''; display:block; height:2px; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+  .card.vacant-card { border-style:dashed; opacity:.72; }
+  .card.vacant-card .avatar { background:transparent; border:1px dashed var(--text-dim); color:var(--text-dim); }
+  .card:not(.is-editing):hover { border-color:var(--gold); box-shadow:0 0 16px rgba(201,168,76,.12); transform:translateY(-2px); }
+  .card.is-open { border-color:rgba(201,168,76,.4); }
+  .card.is-editing { border-color:var(--border-edit); box-shadow:0 0 0 2px rgba(58,74,106,.35); transform:none !important; }
+
+  /* Card top */
+  .card-top { padding:10px 10px 8px; border-bottom:1px solid var(--border); position:relative; }
+  .pencil { display:none; position:absolute; top:6px; right:6px; width:19px; height:19px; background:var(--gold-dim); border:1px solid var(--gold); border-radius:3px; align-items:center; justify-content:center; cursor:pointer; font-size:10px; color:var(--gold); z-index:5; }
+  body.edit-mode .pencil { display:flex; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:var(--gold-dim); border:1px solid var(--gold); display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:11px; font-weight:700; color:var(--gold-light); margin-bottom:6px; }
+  .card-role { font-family:'Cormorant Garamond',serif; font-size:12px; font-weight:600; color:var(--text); line-height:1.3; margin-bottom:3px; }
+  .card-name { font-size:10px; color:var(--gold); letter-spacing:.05em; font-weight:500; }
+  .card-name.vacant { color:var(--text-dim); font-style:italic; }
+
+  /* Inputs */
+  .einput { background:rgba(255,255,255,.04); border:1px solid var(--border-edit); border-radius:3px; color:var(--text); font-family:inherit; padding:3px 6px; font-size:10px; width:100%; margin-bottom:4px; outline:none; transition:border-color .2s; }
+  .einput:focus { border-color:var(--gold); }
+  .einput.erole { font-family:'Cormorant Garamond',serif; font-size:12px; font-weight:600; }
+
+  /* Toggle */
+  .toggle-bar { padding:5px 10px; display:flex; align-items:center; justify-content:space-between; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-muted); cursor:pointer; transition:color .2s; user-select:none; }
+  .card.is-open .toggle-bar,.card:not(.is-editing):hover .toggle-bar { color:var(--gold); }
+  .chev { width:8px; height:8px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg); transition:transform .25s; flex-shrink:0; }
+  .card.is-open .chev { transform:rotate(-135deg); }
+  body.edit-mode .toggle-bar { pointer-events:none; }
+
+  /* Card body */
+  .card-body { max-height:0; overflow:hidden; transition:max-height .35s cubic-bezier(.4,0,.2,1); }
+  .card.is-open .card-body,.card.is-editing .card-body { max-height:700px; }
+  .card-body-inner { padding:8px 10px 10px; border-top:1px solid var(--border); background:var(--surface2); }
+  .rlbl { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:500; }
+
+  /* ── RESPONSIBILITY LIST — flex-based, always clean ── */
+  .rlist { list-style:none; display:flex; flex-direction:column; gap:0; }
+  .ritem {
+    display:flex;
+    align-items:baseline;
+    gap:5px;
+    padding:3.5px 0;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .ritem:last-child { border-bottom:none; }
+  .rdash { flex-shrink:0; color:var(--gold); opacity:0.45; font-size:9px; line-height:1.5; margin-top:1px; }
+  .rtxt {
+    font-size:10px;
+    color:var(--text-muted);
+    line-height:1.5;
+    flex:1;
+    min-width:0;
+    word-break:break-word;
+  }
+  /* Hyperlink styling inside responsibilities */
+  .rtxt a {
+    color:var(--gold-light);
+    text-decoration:underline;
+    text-decoration-color:rgba(232,201,106,0.35);
+    text-underline-offset:2px;
+    transition:color .15s, text-decoration-color .15s;
+  }
+  .rtxt a:hover { color:#fff; text-decoration-color:var(--gold); }
+
+  /* Edit mode item */
+  .ritem.ei .rdash { display:none; }
+  .ritem.ei .rtxt  { display:none; }
+  .ri-row { display:none; flex-direction:column; gap:3px; flex:1; min-width:0; }
+  .ritem.ei .ri-row { display:flex; }
+  .ri-top { display:flex; align-items:center; gap:3px; }
+  .ri-top .einput { margin-bottom:0; flex:1; }
+  .ri-bottom { display:flex; align-items:center; gap:4px; padding-left:1px; }
+  .url-lbl { font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); white-space:nowrap; flex-shrink:0; }
+  .ri-bottom .einput { margin-bottom:0; flex:1; font-size:9px; color:var(--text-dim); }
+  .ri-bottom .einput::placeholder { color:var(--text-dim); opacity:.6; }
+  .btn-rm { width:18px; height:18px; border-radius:2px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; line-height:1; background:var(--danger-dim); color:var(--danger); transition:background .15s; }
+  .btn-rm:hover { background:rgba(201,76,76,.3); }
+
+  .add-r { display:none; margin-top:7px; width:100%; padding:4px; border:1px dashed var(--border-edit); background:transparent; color:var(--text-dim); border-radius:2px; font-size:9px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+  .add-r:hover { border-color:var(--gold); color:var(--gold); }
+  .card.is-editing .add-r { display:block; }
+
+  /* Edit bar */
+  .edit-bar { display:none; padding:6px 10px; border-top:1px solid var(--border-edit); gap:5px; }
+  .card.is-editing .edit-bar { display:flex; }
+  .btn-done { flex:1; padding:4px; background:var(--gold); border:none; color:#0d0f14; font-size:9px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; border-radius:2px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .btn-done:hover { background:var(--gold-light); }
+  .btn-del { padding:4px 7px; background:var(--danger-dim); border:1px solid var(--danger); color:var(--danger); font-size:9px; letter-spacing:.1em; text-transform:uppercase; border-radius:2px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .btn-del:hover { background:rgba(201,76,76,.3); }
+
+  /* Add seat */
+  .add-seat-li { display:none; flex-direction:column; align-items:center; position:relative; padding:0 8px; }
+  body.edit-mode .add-seat-li { display:flex; }
+  .add-seat-li::before { content:''; display:block; width:2px; height:var(--line-h); background:var(--line); flex-shrink:0; }
+  .add-seat-btn { width:175px; min-height:66px; border:1.5px dashed var(--border-edit); border-radius:5px; background:transparent; color:var(--text-dim); font-size:9px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; flex-shrink:0; font-family:'DM Sans',sans-serif; transition:all .2s; z-index:2; }
+  .add-seat-btn .plus { font-size:18px; font-weight:300; line-height:1; }
+  .add-seat-btn:hover { border-color:var(--gold); color:var(--gold); }
+
+  /* Modal */
+  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:200; align-items:center; justify-content:center; }
+  .modal-bg.on { display:flex; }
+  .modal { background:var(--surface2); border:1px solid var(--border-edit); border-radius:8px; padding:22px; width:340px; }
+  .modal h3 { font-family:'Cormorant Garamond',serif; font-size:18px; margin-bottom:14px; }
+  .modal label { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); display:block; margin-bottom:4px; margin-top:10px; font-weight:500; }
+  .modal .einput { font-size:11px; }
+  .modal textarea.einput { resize:vertical; font-family:inherit; min-height:72px; }
+  .modal-btns { display:flex; gap:8px; margin-top:16px; }
+  .modal-btns .btn { flex:1; padding:8px; font-size:11px; }
+  .modal-hint { font-size:9px; color:var(--text-dim); margin-top:6px; line-height:1.5; }
+  .modal-hint code { color:var(--gold-light); background:rgba(255,255,255,.05); padding:1px 4px; border-radius:2px; font-size:8px; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .card { animation:fadeUp .4s ease both; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Heartland Ventures</h1>
+  <span class="tag">Accountability Chart™</span>
+  <div class="header-right">
+    <span class="saved-lbl" id="savedLbl">✓ Saved</span>
+    <div class="zoom-strip">
+      <span class="zoom-lbl">Zoom</span>
+      <button class="zbtn" onclick="adjZoom(-0.1)">−</button>
+      <span class="zoom-val" id="zoomVal">90%</span>
+      <button class="zbtn" onclick="adjZoom(0.1)">+</button>
+      <button class="zfit" onclick="fitScreen()">Fit</button>
+    </div>
+    <button class="btn btn-edit" id="editBtn" onclick="toggleEdit()">✏ &nbsp;Edit</button>
+    <button class="btn btn-dl" onclick="exportFile()">↓ &nbsp;Download</button>
+    <button class="btn btn-rst" onclick="resetData()" title="Restore defaults">↺</button>
+  </div>
+</header>
+
+<div class="edit-banner" id="banner">✏ &nbsp;Edit Mode ON — click the pencil on any card to edit. Paste a URL under any responsibility to make it a hyperlink.</div>
+
+<div class="canvas-outer" id="outer">
+  <div class="canvas-inner" id="inner">
+    <div id="chart"></div>
+  </div>
+</div>
+
+<!-- Add Seat Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Add New Seat</h3>
+    <label>Seat / Role Title</label>
+    <input class="einput erole" id="mRole" placeholder="e.g. Community — Detroit Market">
+    <label>Person's Name</label>
+    <input class="einput" id="mName" placeholder="Leave blank for Open Seat">
+    <label>Responsibilities (one per line)</label>
+    <textarea class="einput" id="mResps" placeholder="LP Relations Execution&#10;IL Management &amp; Discovery&#10;Fundraising Execution"></textarea>
+    <p class="modal-hint">To add a hyperlink to a responsibility after creating the seat, use Edit Mode and paste a URL into the link field below each item.</p>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-save" onclick="confirmAdd()">Add Seat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DEFAULT DATA ──────────────────────────────────────────────────────────────
+// Resps can be strings OR objects: { text: "Label", url: "https://..." }
+const DEFAULT_DATA = {"id":"ceo","role":"CEO / Managing Partner","name":"Max Brickman","resps":["Vision","Institutional Fundraising","Big Relationships","Story/Brand","Culture","Continuous Improvement"],"children":[{"id":"integrator","role":"Integrator","name":"Max Brickman","resps":["Lead, Manage, Accountability","P&L","---------------------------------","Clarity"],"children":[{"id":"comm-success","role":"Community Success","name":"Braden Lambros","resps":["LMA","Community Automation and Outreach Improvement","Ventures Portco Value Add Execution","Community Thought Leadership and Engagement","PE Proprietary Deal Sourcing","Community Marketing and Content Creation: **to be worked out with Cali and Conor","PE Portfolio Operating Bench Development"],"children":[{"id":"columbus","role":"Community — Columbus & TBD Market","name":"Mary Kenney","resps":["Region 1 LP Relations Execution","Region 1 IL Management & Discovery Execution","Region 1 IL Creation Execution","Region 1 Fundraising Execution","Portfolio Intel & Introductions Execution","Heartland Industry Knowledge"],"children":[]},{"id":"cincy","role":"Community — Cincinnati & Louisville Market","name":"Tom Williams","resps":["Region 2 LP Relations Execution","Region 2 IL Management & Discovery Execution","Region 2 IL Creation Execution","Region 2 Fundraising Execution","Portfolio Intel & Introductions Execution"],"children":[]},{"id":"indy","role":"Community — Indy Market","name":"Conor McGuinness","resps":["Region 3 LP Relations Execution","Region 3 IL Management & Discovery Execution","Region 3 IL Creation Execution","Region 3 Fundraising Execution","Portfolio Intel & Introductions Execution"],"children":[]},{"id":"cleveland","role":"Community — Cleveland Market","name":"Melissa D'elia","resps":["Region 4 LP Relations Execution","Region 4 IL Creation Execution","Region 4 IL Management & Discovery","Region 4 Fundraising Execution","Portfolio Intel & Introductions Execution"],"children":[]},{"id":"revops","role":"Rev Ops","name":"Koby Doughty","resps":["Systems Management — Affinity (CRM)","Structure, process and insights for key areas of relationship management","Enable data-driven insights & reporting","Systematize best practices & operational knowledge / Best call templates","Leverage AI to drive efficiency and scale","Support PE Portfolio Companies GTM"],"children":[]}]},{"id":"expansion","role":"Expansion","name":"Conor McGuinness","resps":["LMA","New Market Sourcing","Advisor Sourcing & Management","New Market Launching"],"children":[]},{"id":"pe","role":"PE","name":"Daniel Corbett","resps":["LMA","Deal Diligence","Debt and Financing","Legal","Sale Prep","Value Add Strategy","Returns"],"children":[{"id":"milan","role":"PE Investor — Milan starting 10/27","name":"Milan Joshi","resps":[],"children":[]}]},{"id":"operations","role":"Operations","name":"Lauren Williams","resps":["LMA","Finance Cadence (with fractional Controller/CFO)","Operating System & PMO","Vendors, Tools & Data Governance","IR/Content mgmt + Reporting + Brand","Fund Legal/Compliance","Human Resources"],"children":[{"id":"fractional","role":"Fractional Controller","name":"John Passen","resps":["Fund Valuations","Audits","Cash, A/P & A/R, Payroll","Financial Controls","Treasury","PE Reporting"],"children":[]}]},{"id":"ventures","role":"Ventures","name":"Max Brickman","resps":["LMA","Portfolio Construction","Diligence & Investment Execution","Portfolio Management","Returns","Deal Sourcing"],"children":[{"id":"open-seat","role":"Ventures","name":"","vacant":true,"resps":["Co-investor Relationships","Sourcing New Deals","Diligence","Deals Pipeline","Portfolio Rocks","Track Portfolio KPIs"],"children":[]}]}]},{"id":"support","role":"Support","name":"Hannah Milgrom","resps":["Optimize Visionary Time","Internal and Annual Events","Office Management","Team Support"],"children":[]}]};
+
+// ── STORAGE ───────────────────────────────────────────────────────────────────
+const SK = 'hv_chart_v3', ZK = 'hv_zoom_v2';
+function loadData() { try { const s=localStorage.getItem(SK); if(s) return JSON.parse(s); } catch(e){} return JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+function saveData() {
+  try { localStorage.setItem(SK, JSON.stringify(orgData)); } catch(e){}
+  const l=document.getElementById('savedLbl'); l.classList.add('show'); setTimeout(()=>l.classList.remove('show'),2000);
+}
+function resetData() {
+  if (!confirm('Reset to original data? All browser-saved changes will be lost.')) return;
+  localStorage.removeItem(SK);
+  orgData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  render();
+}
+
+// ── ZOOM ──────────────────────────────────────────────────────────────────────
+let zoom = parseFloat(localStorage.getItem(ZK)||'0.9');
+function applyZoom(z) {
+  zoom = Math.min(2, Math.max(0.25, parseFloat(z.toFixed(2))));
+  document.getElementById('inner').style.transform = `scale(${zoom})`;
+  document.getElementById('zoomVal').textContent = Math.round(zoom*100)+'%';
+  try { localStorage.setItem(ZK, zoom); } catch(e){}
+}
+function adjZoom(d) { applyZoom(zoom+d); }
+function fitScreen() {
+  const o=document.getElementById('outer'), i=document.getElementById('inner');
+  i.style.transform='scale(1)';
+  const nw=i.scrollWidth, nh=i.scrollHeight;
+  applyZoom(Math.min((o.clientWidth-40)/nw,(o.clientHeight-40)/nh,1));
+  o.scrollTo(0,0);
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('outer').addEventListener('wheel', e=>{
+    if (e.ctrlKey||e.metaKey) { e.preventDefault(); adjZoom(e.deltaY<0?.05:-.05); }
+  },{passive:false});
+  applyZoom(zoom);
+});
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let orgData = loadData();
+let editMode = false, modalTarget = null;
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function ini(n) { if(!n)return'—'; const p=n.trim().split(/\s+/).filter(Boolean); return p.length>=2?(p[0][0]+p[p.length-1][0]).toUpperCase():p[0].slice(0,2).toUpperCase(); }
+function find(node,id) { if(node.id===id)return node; for(const c of(node.children||[])){const f=find(c,id);if(f)return f;} return null; }
+function del(tree,id) { if(!tree.children)return false; const i=tree.children.findIndex(c=>c.id===id); if(i!==-1){tree.children.splice(i,1);return true;} for(const c of tree.children)if(del(c,id))return true; return false; }
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Normalize a resp to {text, url} — backward compatible with plain strings
+function norm(r) { return (typeof r==='object' && r!==null) ? r : {text:r, url:''}; }
+
+// Render display text (with optional hyperlink)
+function respDisplay(r) {
+  const {text, url} = norm(r);
+  if (url && url.trim()) {
+    const safeUrl = esc(url.trim());
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
+  }
+  return esc(text);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function cardHTML(node, isRoot) {
+  const v = !node.name||node.vacant;
+  const initials = v?'—':ini(node.name);
+  const cls = ['card', isRoot?'ceo-card':'', v?'vacant-card':''].filter(Boolean).join(' ');
+
+  const ri = (node.resps||[]).map((r,i) => {
+    const {text, url} = norm(r);
+    return `
+    <li class="ritem" data-i="${i}">
+      <span class="rdash">—</span>
+      <span class="rtxt">${respDisplay(r)}</span>
+      <div class="ri-row">
+        <div class="ri-top">
+          <input class="einput" placeholder="Responsibility text" value="${esc(text)}">
+          <button class="btn-rm" onclick="rmR('${node.id}',${i})">×</button>
+        </div>
+        <div class="ri-bottom">
+          <span class="url-lbl">Link:</span>
+          <input class="einput" placeholder="https://... (optional)" value="${esc(url||'')}">
+        </div>
+      </div>
+    </li>`;
+  }).join('');
+
+  return `
+<div class="${cls}" id="card-${node.id}">
+  <div class="card-top">
+    <div class="pencil" onclick="startEdit('${node.id}')">✏</div>
+    <div class="avatar">${esc(initials)}</div>
+    <div class="card-role" id="rd-${node.id}">${esc(node.role)}</div>
+    <input class="einput erole" id="ri-${node.id}" value="${esc(node.role)}" style="display:none" placeholder="Seat Title">
+    <div class="card-name${v?' vacant':''}" id="nd-${node.id}">${v?'Open Seat':esc(node.name)}</div>
+    <input class="einput" id="ni-${node.id}" value="${esc(node.name||'')}" style="display:none" placeholder="Person's Name">
+  </div>
+  <div class="toggle-bar" onclick="tog('${node.id}')"><span>Responsibilities</span><span class="chev"></span></div>
+  <div class="card-body">
+    <div class="card-body-inner">
+      <div class="rlbl">Roles &amp; Responsibilities</div>
+      <ul class="rlist" id="rl-${node.id}">${ri}</ul>
+      <button class="add-r" onclick="addR('${node.id}')">+ Add Responsibility</button>
+    </div>
+  </div>
+  <div class="edit-bar">
+    <button class="btn-done" onclick="doneEdit('${node.id}')">✓ Done</button>
+    <button class="btn-del" onclick="delCard('${node.id}')">Delete</button>
+  </div>
+</div>`;
+}
+
+function liHTML(node, isRoot) {
+  const hasKids = node.children && node.children.length > 0;
+  const addBtn = `<li class="add-seat-li"><button class="add-seat-btn" onclick="openModal('${node.id}')"><span class="plus">+</span><span>Add Seat</span></button></li>`;
+  if (!hasKids) {
+    return `<li id="li-${node.id}"><div class="node-card-wrap">${cardHTML(node,isRoot)}</div></li>`;
+  }
+  return `<li id="li-${node.id}">
+    <div class="node-card-wrap">
+      ${cardHTML(node,isRoot)}
+      <div class="down-to-children"></div>
+    </div>
+    <ul id="ul-${node.id}">${node.children.map(c=>liHTML(c,false)).join('')}${addBtn}</ul>
+  </li>`;
+}
+
+function render() {
+  document.getElementById('chart').innerHTML =
+    `<ul class="tree">${liHTML(orgData,true)}</ul>`;
+  requestAnimationFrame(fixHBars);
+}
+
+function fixHBars() {
+  document.querySelectorAll('.tree ul').forEach(ul => {
+    const ex = ul.querySelector(':scope > .hbar'); if(ex) ex.remove();
+    const lis = Array.from(ul.children).filter(c=>c.tagName==='LI'&&!c.classList.contains('add-seat-li'));
+    if (lis.length < 2) return;
+    const ulR=ul.getBoundingClientRect();
+    const fR=lis[0].getBoundingClientRect();
+    const lR=lis[lis.length-1].getBoundingClientRect();
+    const left=(fR.left+fR.width/2)-ulR.left;
+    const right=(lR.left+lR.width/2)-ulR.left;
+    const bar=document.createElement('div');
+    bar.className='hbar';
+    bar.style.cssText=`position:absolute;top:0;left:${left}px;width:${right-left}px;height:2px;background:var(--line);z-index:0;pointer-events:none;`;
+    ul.appendChild(bar);
+  });
+}
+
+// ── CARD INTERACTIONS ─────────────────────────────────────────────────────────
+function tog(id) {
+  if(editMode) return;
+  document.getElementById('card-'+id).classList.toggle('is-open');
+}
+
+function startEdit(id) {
+  if(!editMode) return;
+  const c=document.getElementById('card-'+id);
+  c.classList.add('is-editing','is-open');
+  c.querySelector('#rd-'+id).style.display='none';
+  c.querySelector('#ri-'+id).style.display='';
+  c.querySelector('#nd-'+id).style.display='none';
+  c.querySelector('#ni-'+id).style.display='';
+  c.querySelectorAll('.ritem').forEach(l=>l.classList.add('ei'));
+}
+
+function doneEdit(id) {
+  const c=document.getElementById('card-'+id), node=find(orgData,id); if(!node)return;
+  node.role=(document.getElementById('ri-'+id).value||'').trim()||node.role;
+  node.name=(document.getElementById('ni-'+id).value||'').trim();
+  node.vacant=!node.name;
+  // Collect resps preserving {text,url} structure
+  node.resps = Array.from(c.querySelectorAll('.ritem.ei')).map(li => {
+    const inputs = li.querySelectorAll('.einput');
+    const text = (inputs[0]?.value||'').trim();
+    const url  = (inputs[1]?.value||'').trim();
+    if (!text) return null;
+    return url ? {text, url} : text;
+  }).filter(Boolean);
+  saveData(); render();
+  if(editMode) document.body.classList.add('edit-mode');
+}
+
+function delCard(id) {
+  if(!confirm('Delete this seat and all its children?')) return;
+  del(orgData,id); saveData(); render();
+  if(editMode) document.body.classList.add('edit-mode');
+}
+
+function addR(id) {
+  const node=find(orgData,id); if(!node)return;
+  const c=document.getElementById('card-'+id);
+  // Save current state first
+  node.resps = Array.from(c.querySelectorAll('.ritem.ei')).map(li => {
+    const inputs=li.querySelectorAll('.einput');
+    const text=(inputs[0]?.value||'').trim();
+    const url=(inputs[1]?.value||'').trim();
+    if(!text) return null;
+    return url?{text,url}:text;
+  }).filter(Boolean);
+  node.resps.push('New Responsibility');
+  render(); document.body.classList.add('edit-mode'); startEdit(id);
+  const items=document.querySelectorAll('#rl-'+id+' .ritem');
+  if(items.length){const last=items[items.length-1]; const inp=last.querySelector('.ri-top .einput'); if(inp){inp.focus();inp.select();}}
+}
+
+function rmR(id,idx) {
+  const node=find(orgData,id); if(!node)return;
+  const c=document.getElementById('card-'+id);
+  const resps=Array.from(c.querySelectorAll('.ritem.ei')).map(li=>{
+    const inputs=li.querySelectorAll('.einput');
+    const text=(inputs[0]?.value||'').trim();
+    const url=(inputs[1]?.value||'').trim();
+    if(!text)return null;
+    return url?{text,url}:text;
+  }).filter(Boolean);
+  resps.splice(idx,1); node.resps=resps;
+  render(); document.body.classList.add('edit-mode'); startEdit(id);
+}
+
+// ── EDIT MODE ─────────────────────────────────────────────────────────────────
+function toggleEdit() {
+  editMode=!editMode;
+  const btn=document.getElementById('editBtn'), ban=document.getElementById('banner');
+  if(editMode){
+    document.body.classList.add('edit-mode');
+    btn.classList.add('active'); btn.textContent='✓ Exit Edit';
+    ban.classList.add('on');
+  } else {
+    document.querySelectorAll('.card.is-editing').forEach(c=>doneEdit(c.id.replace('card-','')));
+    document.body.classList.remove('edit-mode');
+    btn.classList.remove('active'); btn.textContent='✏ \u00A0Edit';
+    ban.classList.remove('on'); render();
+  }
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(pid){modalTarget=pid;['mRole','mName','mResps'].forEach(id=>document.getElementById(id).value='');document.getElementById('modal').classList.add('on');setTimeout(()=>document.getElementById('mRole').focus(),80);}
+function closeModal(){document.getElementById('modal').classList.remove('on');modalTarget=null;}
+function confirmAdd(){
+  const role=document.getElementById('mRole').value.trim(); if(!role){document.getElementById('mRole').focus();return;}
+  const name=document.getElementById('mName').value.trim();
+  const resps=document.getElementById('mResps').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+  const newNode={id:'seat-'+Date.now(),role,name,vacant:!name,resps,children:[]};
+  const p=find(orgData,modalTarget); if(p)p.children.push(newNode);
+  saveData();closeModal();render();document.body.classList.add('edit-mode');
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────────
+function exportFile(){
+  document.querySelectorAll('.card.is-editing').forEach(c=>doneEdit(c.id.replace('card-','')));
+  const ds=JSON.stringify(orgData);
+  const src=document.documentElement.outerHTML;
+  const updated=src.replace(/const DEFAULT_DATA = \{[\s\S]*?\};(\s*\/\/ ── STORAGE)/,`const DEFAULT_DATA = ${ds};$1`);
+  const blob=new Blob([updated],{type:'text/html'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='heartland-ventures-org-chart.html'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+render();
+setTimeout(fitScreen, 150);
+</script>
+</body>
+</html>
